@@ -266,6 +266,12 @@ def test_security_headers_present(client):
     assert response.headers["X-Frame-Options"] == "DENY"
 
 
+def test_referrer_policy_lets_map_tiles_identify_the_site(client):
+    # OpenStreetMap blocks tile requests with no Referer. This sends only the origin
+    # to other sites, so incident and account URLs still stay private.
+    assert client.get("/").headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+
+
 def test_csrf_blocks_forms_when_enabled(app, dispatcher):
     app.config["WTF_CSRF_ENABLED"] = True
     client = app.test_client()
