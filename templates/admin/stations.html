@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}Stations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Stations</h1>
+    <p class="muted">Check each application before approving it. Approved stations can see callers' personal details.</p>
+  </div>
+  <span class="spacer"></span>
+  <a class="btn btn-primary" href="{{ url_for('admin.new_station') }}">Add a station</a>
+</div>
+
+<h2 class="section-title" style="margin-top:0">Waiting for approval <span class="count">{{ pending | length }}</span></h2>
+{% if pending %}
+<div class="data-wrap"><table class="data">
+  <thead><tr><th>Station</th><th>Contact</th><th>Reference</th><th>Applied by</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for s in pending %}
+    <tr>
+      <td><strong>{{ s.name }}</strong><small>{{ s.type_label }} · {{ s.zone }}</small><small>{{ s.address }}</small><small><a href="https://www.openstreetmap.org/?mlat={{ s.lat }}&mlon={{ s.lng }}#map=16/{{ s.lat }}/{{ s.lng }}" target="_blank" rel="noopener">Check location on map</a></small></td>
+      <td>{{ s.phone }}<small>{{ s.email or '' }}</small><small>{{ s.contact_name or '' }}</small></td>
+      <td>{{ s.registration_ref or '—' }}</td>
+      <td>{% for u in s.staff %}{{ u.full_name }}<small>{{ u.email }}</small>{% endfor %}<small>{{ s.created_at | when }}</small></td>
+      <td><div class="btn-row">
+        <form method="post" action="{{ url_for('admin.review_station', station_id=s.id, action='approve') }}" data-confirm="Approve {{ s.name }}? Its staff will be able to see personal details on assigned incidents.">
+          {{ forms.csrf() }}<button class="btn btn-primary btn-small" type="submit">Approve</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.review_station', station_id=s.id, action='reject') }}" data-confirm="Reject {{ s.name }}'s application?">
+          {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">Reject</button>
+        </form>
+      </div></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty-state">No applications are waiting.</div>
+{% endif %}
+
+<h2 class="section-title">All stations <span class="count">{{ others | length }}</span></h2>
+{% if others %}
+<div class="data-wrap"><table class="data">
+  <thead><tr><th>Code</th><th>Station</th><th>Phone</th><th>Staff</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for s in others %}
+    <tr>
+      <td class="mono">{{ s.code }}</td>
+      <td><strong>{{ s.name }}</strong><small>{{ s.type_label }} · {{ s.zone }}</small></td>
+      <td>{{ s.phone }}</td>
+      <td>{{ s.staff | length }}</td>
+      <td><span class="badge badge-{{ s.status }}">{{ s.status | capitalize }}</span></td>
+      <td><div class="btn-row">
+        <a class="btn btn-ghost btn-small" href="{{ url_for('admin.edit_station', station_id=s.id) }}">Edit</a>
+        {% if s.status == 'approved' %}
+        <form method="post" action="{{ url_for('admin.review_station', station_id=s.id, action='suspend') }}" data-confirm="Suspend {{ s.name }}? Its staff lose access immediately and its open incidents go back to the queue.">
+          {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">Suspend</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('admin.review_station', station_id=s.id, action='approve') }}" data-confirm="Approve {{ s.name }}?">
+          {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">Approve</button>
+        </form>
+        {% endif %}
+      </div></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty-state">No stations yet.</div>
+{% endif %}
+{% endblock %}

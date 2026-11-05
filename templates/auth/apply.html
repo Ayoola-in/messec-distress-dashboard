@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}Register a station{% endblock %}
+{% block head %}{{ forms.leaflet_head() }}{% endblock %}
+{% block content %}
+<section class="medium">
+  <div class="page-head">
+    <div>
+      <h1>Register a station</h1>
+      <p class="lede">For police stations, hospitals, fire and ambulance services, and other responding bodies. An administrator checks every application. You can log in and receive incidents once it's approved.</p>
+    </div>
+  </div>
+  <form method="post">
+    {{ forms.csrf() }}
+    <div class="card">
+      <h2 style="margin-bottom:16px">Station details</h2>
+      {{ forms.station_fields(values, errors, STATION_TYPES) }}
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:16px">Your login</h2>
+      <div class="form-grid">
+        {{ forms.field("login_name", "Your full name", values, errors, required=true, autocomplete="name") }}
+        {{ forms.field("login_email", "Your work email", values, errors, type="email", required=true, autocomplete="email") }}
+        {{ forms.field("password", "Password", errors=errors, type="password", required=true, hint="At least 10 characters.", autocomplete="new-password") }}
+        {{ forms.field("confirm", "Confirm password", type="password", required=true, autocomplete="new-password") }}
+      </div>
+      <button class="btn btn-primary" type="submit" style="margin-top:18px">Submit application</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}{{ forms.leaflet_js() }}<script src="/static/js/picker.js"></script>{% endblock %}

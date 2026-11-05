@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Emergency dispatch{% endblock %}: MesSec</title>
+  <meta name="theme-color" content="#06080c" />
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff4d5e'/%3E%3Cpath d='M9 17a10 10 0 0 1 14 0M12 20.5a5 5 0 0 1 8 0' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='24' r='1.8' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet" />
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+</head>
+<body class="site">
+{% include "_sprite.html" %}
+
+<header class="site-head">
+  <a class="site-brand" href="{{ url_for('public.landing') }}">
+    <span class="brand-mark"><svg class="ic"><use href="#i-signal"/></svg></span>MesSec
+  </a>
+  <nav class="site-nav" aria-label="Main">
+    {% if current_user.is_authenticated %}
+      {% set endpoint = request.endpoint or '' %}
+      {% if current_user.is_staff %}
+        <a href="{{ url_for('incidents.dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('incidents.history') }}" class="{{ 'is-active' if endpoint in ('incidents.history', 'incidents.detail') }}">Incident history</a>
+      {% endif %}
+      {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('admin.stations') }}" class="{{ 'is-active' if endpoint in ('admin.stations', 'admin.new_station', 'admin.edit_station') }}">Stations</a>
+        <a href="{{ url_for('admin.users') }}" class="{{ 'is-active' if endpoint == 'admin.users' }}">Users</a>
+        <a href="{{ url_for('admin.audit_log') }}" class="{{ 'is-active' if endpoint == 'admin.audit_log' }}">Audit log</a>
+      {% endif %}
+      {% if current_user.role == 'station' %}
+        <a href="{{ url_for('station.console') }}" class="{{ 'is-active' if endpoint == 'station.console' }}">Console</a>
+        <a href="{{ url_for('incidents.history') }}" class="{{ 'is-active' if endpoint in ('incidents.history', 'incidents.detail') }}">Incident history</a>
+      {% endif %}
+      {% if current_user.role == 'citizen' %}
+        <a href="{{ url_for('citizen.home') }}" class="{{ 'is-active' if endpoint == 'citizen.home' }}">My safety</a>
+      {% endif %}
+    {% endif %}
+  </nav>
+  <div class="site-user">
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('public.change_password') }}" title="Change password">{{ current_user.full_name }}</a>
+      <form method="post" action="{{ url_for('public.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-ghost btn-small" type="submit">Log out</button>
+      </form>
+    {% else %}
+      <a class="btn btn-ghost btn-small" href="{{ url_for('public.login') }}">Log in</a>
+      <a class="btn btn-primary btn-small" href="{{ url_for('public.register') }}">Sign up</a>
+    {% endif %}
+  </div>
+</header>
+
+<main class="site-main {% block main_class %}{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes" role="status">
+        {% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-foot">
+  <span>In immediate danger, call <a href="tel:112">112</a>.</span>
+  <span class="spacer"></span>
+  <a href="{{ url_for('public.privacy') }}">Privacy</a>
+  <a href="{{ url_for('public.apply_station') }}">Register a station</a>
+</footer>
+
+<script src="/static/js/common.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

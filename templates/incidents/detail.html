@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}{{ signal.public_id }}{% endblock %}
+{% block head %}{{ forms.leaflet_head() }}{% endblock %}
+{% block content %}
+{% set own = current_user.role == 'station' and assignment and assignment.station_id == current_user.station_id %}
+{% set next_steps = {'assigned': ('accepted', 'Accept'), 'accepted': ('en_route', 'Mark en route'), 'en_route': ('on_scene', 'Mark on scene'), 'on_scene': ('resolved', 'Mark resolved')} %}
+<div id="incident" data-id="{{ signal.public_id }}" data-lat="{{ signal.lat }}" data-lng="{{ signal.lng }}">
+  <div class="page-head">
+    <div>
+      <p class="muted mono">{{ signal.public_id }}</p>
+      <h1>{{ signal.type }}{% if signal.is_simulated %} <span class="sim-tag">SIMULATED</span>{% endif %}</h1>
+      <p style="margin-top:8px"><span class="sev {{ signal.severity }}">{{ signal.severity }}</span> &nbsp;{{ signal.status_label }}</p>
+    </div>
+    <span class="spacer"></span>
+    <div class="btn-row">
+      {% if current_user.is_staff and signal.status != 'resolved' %}
+        <button class="btn btn-primary" data-action="assign" type="button">{{ 'Assign station' if signal.status == 'unassigned' else 'Reassign' }}</button>
+        <button class="btn btn-ghost" data-action="close" type="button">Close incident</button>
+      {% endif %}
+      {% if own and signal.status in next_steps %}
+        <button class="btn btn-primary" data-action="status" data-status="{{ next_steps[signal.status][0] }}" type="button">{{ next_steps[signal.status][1] }}</button>
+      {% endif %}
+      {% if own and signal.status in ('assigned', 'accepted') %}
+        <button class="btn btn-ghost" data-action="decline" type="button">Decline</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="stack">
+      <section class="card">
+        <h2>Incident</h2>
+        <div class="facts">
+          <div><span>Received</span><strong data-local-time="{{ signal.received_at | iso }}">{{ signal.received_at | when }}</strong></div>
+          <div><span>Source</span><strong>{{ signal.source_label }}</strong></div>
+          <div><span>Location</span><strong><a href="https://www.openstreetmap.org/directions?to={{ signal.lat }},{{ signal.lng }}" target="_blank" rel="noopener">{{ '%.5f' | format(signal.lat) }}, {{ '%.5f' | format(signal.lng) }}</a></strong></div>
+          {% if signal.device_uid %}<div><span>Device</span><strong>{{ signal.device_uid }}</strong></div>{% endif %}
+          {% if signal.satellites is not none %}<div><span>GPS satellites</span><strong>{{ signal.satellites }}</strong></div>{% endif %}
+          {% if signal.resolved_at %}<div><span>Resolved</span><strong data-local-time="{{ signal.resolved_at | iso }}">{{ signal.resolved_at | when }}</strong></div>{% endif %}
+          {% if assignment %}
+            <div><span>Station</span><strong>{{ assignment.station.name }}</strong></div>
+            <div><span>Station phone</span><strong><a href="tel:{{ assignment.station.phone }}">{{ assignment.station.phone }}</a></strong></div>
+            <div><span>Assigned</span><strong>{{ 'Automatically' if assignment.method == 'auto' else (assignment.assigned_by.full_name if assignment.assigned_by else 'Dispatcher') }}</strong></div>
+            <div><span>Distance</span><strong>{{ assignment.distance_km }} km</strong></div>
+            <div><span>Estimated ETA</span><strong>{{ assignment.eta_minutes }} min</strong></div>
+          {% endif %}
+        </div>
+        {% if signal.description %}<p style="margin-top:14px">{{ signal.description }}</p>{% endif %}
+      </section>
+
+      <section class="card">
+        <h2>Person in distress</h2>
+        {% set person = signal.citizen if signal.citizen and not signal.citizen.deleted_at else None %}
+        {% if person %}
+          <div class="facts">
+            <div><span>Name</span><strong>{{ person.full_name }}</strong></div>
+            <div><span>Phone</span><strong><a href="tel:{{ person.phone }}">{{ person.phone }}</a></strong></div>
+            {% if person.profile and person.profile.address %}<div><span>Address</span><strong>{{ person.profile.address }}</strong></div>{% endif %}
+            {% if person.profile and person.profile.blood_group %}<div><span>Blood group</span><strong>{{ person.profile.blood_group }}</strong></div>{% endif %}
+          </div>
+          {% if person.profile and person.profile.medical_notes %}<p style="margin-top:14px"><span class="muted">Medical notes:</span> {{ person.profile.medical_notes }}</p>{% endif %}
+          {% if person.contacts %}
+            <h3 style="margin-top:16px">Emergency contacts</h3>
+            <ul class="list-rows">
+              {% for c in person.contacts %}<li><span>{{ c.name }}{% if c.relationship_label %} ({{ c.relationship_label }}){% endif %}</span><a href="tel:{{ c.phone }}">{{ c.phone }}</a></li>{% endfor %}
+            </ul>
+          {% endif %}
+        {% else %}
+          <p class="muted" style="margin-top:8px">No registered person is linked to this signal.{% if signal.caller_id %} Caller: {{ signal.caller_id }}{% endif %}</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="stack">
+      <div id="incident-map"></div>
+      <section class="card">
+        <h2>Timeline</h2>
+        <ul class="timeline">
+          {% for event in signal.events %}
+            <li class="kind-{{ event.kind }}">
+              {% if event.kind == 'note' and event.actor %}<strong>{{ event.actor.full_name }}:</strong> {% endif %}{{ event.message }}
+              <small data-local-time="{{ event.created_at | iso }}">{{ event.created_at | when }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+        <form id="note-form" class="stack" style="margin-top:16px">
+          <label class="field"><span>Add a note</span><textarea name="message" rows="2" maxlength="1000" required></textarea></label>
+          <div><button class="btn btn-ghost" type="submit">Add note</button></div>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ forms.leaflet_js() }}
+<script src="/static/js/assign.js"></script>
+<script src="/static/js/incident.js"></script>
+{% endblock %}

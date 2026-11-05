@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}{{ 'Edit station' if station else 'Add a station' }}{% endblock %}
+{% block head %}{{ forms.leaflet_head() }}{% endblock %}
+{% block content %}
+<section class="medium">
+  <div class="page-head">
+    <h1>{{ 'Edit ' ~ station.name if station else 'Add a station' }}</h1>
+  </div>
+  <form method="post" class="card">
+    {{ forms.csrf() }}
+    {{ forms.station_fields(values, errors, STATION_TYPES) }}
+    <div class="btn-row" style="margin-top:18px">
+      <button class="btn btn-primary" type="submit">{{ 'Save changes' if station else 'Add and approve station' }}</button>
+      <a class="btn btn-ghost" href="{{ url_for('admin.stations') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}{{ forms.leaflet_js() }}<script src="/static/js/picker.js"></script>{% endblock %}

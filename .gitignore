@@ -4,3 +4,5 @@ __pycache__/
 venv/
 .env
 _ui_backup/
+instance/
+.pytest_cache/

@@ -4,7 +4,10 @@
  * Reads the GPS module (NEO-6M / NEO-7M / NEO-M8N or any NMEA GPS) and, when the
  * panic button is pressed, POSTs the live coordinates to the MesSec dashboard:
  *
- *     POST http://<SERVER_IP>:5000/api/signals/ingest   (JSON)
+ *     POST https://<YOUR_SITE>/api/signals/ingest   (JSON)
+ *
+ * Getting a key: log in to MesSec as a citizen, open "My beacons", choose
+ * "Link a beacon" and paste the key below. Alerts then arrive with your details.
  *
  * Wiring (ESP32 DevKit V1):
  *   GPS VCC  -> 3V3 (or VIN/5V if your module board has a regulator)
@@ -21,6 +24,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <TinyGPSPlus.h>
 #include <ArduinoJson.h>
@@ -28,14 +32,19 @@
 // ───────────── EDIT THESE ─────────────
 const char* WIFI_SSID     = "YOUR_WIFI_NAME";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-// IP address of the computer running app.py (run `ipconfig` / `ifconfig` to find it)
-const char* SERVER_URL    = "http://192.168.1.100:5000/api/signals/ingest";
-// Must match MESSEC_DEVICE_KEY on the server (leave "" if the server has no key set)
-const char* DEVICE_KEY    = "change-me";
-const char* DEVICE_ID     = "ESP32-01";
-const char* CALLER_ID     = "0803 000 0000";      // phone number / name shown on dashboard
+// Your live site, or http://<your-PC-IP>:5000/api/signals/ingest for local testing
+const char* SERVER_URL    = "https://your-messec-site.example/api/signals/ingest";
+// Key from "My beacons" on the website. A server's MESSEC_DEVICE_KEY also works, but
+// those alerts show as "unlinked", with no person attached.
+const char* DEVICE_KEY    = "PASTE_YOUR_DEVICE_KEY_HERE";
+const char* DEVICE_ID     = "ESP32-01";           // only used with the shared key
+const char* CALLER_ID     = "0803 000 0000";      // only used with the shared key
 const char* SIGNAL_TYPE   = "Security Breach";    // e.g. Medical Emergency, Fire Outbreak ...
 const char* SEVERITY      = "CRITICAL";           // CRITICAL | HIGH | MEDIUM | LOW
+// PEM certificate of the authority behind your HTTPS site. Without it the beacon still
+// encrypts its traffic but can't prove it's talking to your server, so someone on the
+// same network could steal the key. Fill this in before real use.
+const char* ROOT_CA       = "";
 // ──────────────────────────────────────
 
 #define GPS_RX_PIN   16     // ESP32 pin that receives GPS TX
@@ -95,7 +104,18 @@ bool sendDistress() {
   serializeJson(doc, body);
 
   HTTPClient http;
-  http.begin(SERVER_URL);
+  WiFiClientSecure secureClient;
+  if (strncmp(SERVER_URL, "https://", 8) == 0) {
+    if (strlen(ROOT_CA) > 0) {
+      secureClient.setCACert(ROOT_CA);
+    } else {
+      Serial.println("WARNING: ROOT_CA is empty, so the server's identity isn't being checked.");
+      secureClient.setInsecure();
+    }
+    http.begin(secureClient, SERVER_URL);
+  } else {
+    http.begin(SERVER_URL);
+  }
   http.addHeader("Content-Type", "application/json");
   if (strlen(DEVICE_KEY) > 0) http.addHeader("X-API-Key", DEVICE_KEY);
   int code = http.POST(body);

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Application received{% endblock %}
+{% block content %}
+<section class="narrow center">
+  <h1>Application received</h1>
+  <p class="lede">An administrator will review it. Try logging in later with the email and password you chose. You'll be able to get in once it's approved.</p>
+  <a class="btn btn-ghost" href="{{ url_for('public.login') }}">Go to log in</a>
+</section>
+{% endblock %}

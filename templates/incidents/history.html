@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Incident history{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Incident history</h1>
+    <p class="muted">{{ pagination.total }} incident{{ '' if pagination.total == 1 else 's' }}{{ ' for your station' if current_user.role == 'station' }}</p>
+  </div>
+  <span class="spacer"></span>
+  <a class="btn btn-ghost" href="{{ csv_url }}">Export CSV</a>
+</div>
+
+<form method="get" class="filter-bar">
+  <label class="field grow"><span>Search</span>
+    <input type="search" name="q" value="{{ filters.get('q', '') }}" placeholder="ID, type, caller, device or station" />
+  </label>
+  <label class="field"><span>Status</span>
+    <select name="status">
+      <option value="">All</option>
+      {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if filters.get('status') == s }}>{{ STATUS_LABELS[s] }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>Severity</span>
+    <select name="severity">
+      <option value="">All</option>
+      {% for s in severities %}<option value="{{ s }}" {{ 'selected' if filters.get('severity') == s }}>{{ s | capitalize }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.get('from', '') }}" /></label>
+  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.get('to', '') }}" /></label>
+  <button class="btn btn-primary" type="submit">Search</button>
+</form>
+
+{% if pagination.items %}
+<div class="data-wrap"><table class="data">
+  <thead><tr><th>Incident</th><th>Severity</th><th>Type</th><th>Station</th><th>Caller</th><th>Status</th><th>Received</th></tr></thead>
+  <tbody>
+  {% for s in pagination.items %}
+    {% set a = s.current_assignment %}
+    <tr>
+      <td class="mono"><a href="{{ url_for('incidents.detail', public_id=s.public_id) }}">{{ s.public_id }}</a></td>
+      <td><span class="sev {{ s.severity }}">{{ s.severity }}</span></td>
+      <td>{{ s.type }}{% if s.is_simulated %} <span class="sim-tag">SIM</span>{% endif %}</td>
+      <td>{{ a.station.name if a else '—' }}</td>
+      <td>{{ s.caller_id or '—' }}</td>
+      <td>{{ s.status_label }}</td>
+      <td><span data-local-time="{{ s.received_at | iso }}">{{ s.received_at | when }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<div class="pagination">
+  {% if pagination.has_prev %}<a class="btn btn-ghost btn-small" href="{{ url_for('incidents.history', page=pagination.prev_num, **filters) }}">Newer</a>{% endif %}
+  <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+  {% if pagination.has_next %}<a class="btn btn-ghost btn-small" href="{{ url_for('incidents.history', page=pagination.next_num, **filters) }}">Older</a>{% endif %}
+</div>
+{% else %}
+<div class="empty-state">No incidents match this search.</div>
+{% endif %}
+{% endblock %}

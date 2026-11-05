@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Emergency dispatch{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Get distress calls to the right station, fast.</h1>
+  <p class="lede">MesSec connects people in danger with a control room and registered police stations, hospitals and fire services. Alerts arrive with a live GPS location and the person's emergency details.</p>
+  <div class="btn-row">
+    <a class="btn btn-primary" href="{{ url_for('public.register') }}">Create a personal account</a>
+    <a class="btn btn-ghost" href="{{ url_for('public.apply_station') }}">Register a station</a>
+  </div>
+</section>
+
+<div class="emergency-note">
+  <svg class="ic"><use href="#i-alert"/></svg>
+  <span>MesSec doesn't replace emergency services. If you're in immediate danger, call <a href="tel:112">112</a>.</span>
+</div>
+
+<section class="tiles">
+  <article class="card tile">
+    <h2>For citizens</h2>
+    <p>Save your details and emergency contacts, link a beacon, and send an SOS with your phone's GPS.</p>
+    <a class="btn btn-ghost" href="{{ url_for('public.register') }}">Sign up</a>
+  </article>
+  <article class="card tile">
+    <h2>For stations</h2>
+    <p>Apply to join. Once approved, incidents assigned to you appear live, with the caller's location and details.</p>
+    <a class="btn btn-ghost" href="{{ url_for('public.apply_station') }}">Apply to join</a>
+  </article>
+  <article class="card tile">
+    <h2>For control rooms</h2>
+    <p>See every signal on one map, assign each to the best station, and keep a full record of the response.</p>
+    <a class="btn btn-ghost" href="{{ url_for('public.login') }}">Log in</a>
+  </article>
+</section>
+
+<section class="flow">
+  <h2>How an alert is handled</h2>
+  <ol>
+    <li>A beacon or the SOS button sends a distress signal with a GPS location.</li>
+    <li>A dispatcher assigns it to a registered station, with the nearest suitable one suggested.</li>
+    <li>The station accepts it and updates its progress. The person sees each step.</li>
+    <li>The incident is resolved, and the full timeline is kept on record.</li>
+  </ol>
+</section>
+{% endblock %}

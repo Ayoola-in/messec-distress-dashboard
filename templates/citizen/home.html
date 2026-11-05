@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}My safety{% endblock %}
+{% block head %}{{ forms.leaflet_head() }}{% endblock %}
+{% block content %}
+<div class="portal-grid">
+  <section class="card active-alert" id="active-alert" aria-live="polite" hidden></section>
+
+  <section class="card sos-card" id="sos-panel">
+    <h1>Need help?</h1>
+    <p class="muted" style="margin-top:6px">Your location and details go to the control room. In immediate danger, also call <a href="tel:112">112</a>.</p>
+    <div class="sos-controls">
+      <label class="field"><span>What's happening?</span>
+        <select id="sos-type">
+          {% for type in sos_types %}<option value="{{ type }}">{{ type }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field"><span>Details (optional)</span>
+        <input id="sos-description" type="text" maxlength="500" />
+      </label>
+    </div>
+    <button id="sos-button" type="button" aria-label="Press and hold to send an SOS"><span id="sos-label">Hold for SOS</span></button>
+    <p class="muted" style="margin-top:14px">Press and hold for about 2 seconds.</p>
+    <div class="sos-fallback" id="sos-fallback" hidden>
+      <p class="field-error" id="sos-fallback-text"></p>
+      <div id="sos-map"></div>
+    </div>
+    <input type="hidden" id="sos-lat" />
+    <input type="hidden" id="sos-lng" />
+  </section>
+
+  <section class="card" id="profile">
+    <h2>My details</h2>
+    <p class="muted">Responders see these when you send an alert.</p>
+    <form method="post" action="{{ url_for('citizen.save_profile') }}" class="stack" style="margin-top:14px">
+      {{ forms.csrf() }}
+      {% set v = {"full_name": current_user.full_name, "phone": current_user.phone, "address": profile.address if profile else None} %}
+      {{ forms.field("full_name", "Full name", v, required=true) }}
+      {{ forms.field("phone", "Phone number", v, type="tel", required=true) }}
+      {{ forms.field("address", "Home address", v) }}
+      <label class="field"><span>Blood group</span>
+        <select name="blood_group">
+          <option value="">Not specified</option>
+          {% for group in blood_groups %}
+            <option value="{{ group }}" {{ 'selected' if profile and profile.blood_group == group }}>{{ group }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field"><span>Medical notes</span>
+        <textarea name="medical_notes" rows="3" maxlength="1000" placeholder="Allergies, conditions, medication">{{ profile.medical_notes if profile and profile.medical_notes else '' }}</textarea>
+      </label>
+      <div><button class="btn btn-primary" type="submit">Save details</button></div>
+    </form>
+  </section>
+
+  <div class="stack">
+    <section class="card" id="contacts">
+      <h2>Emergency contacts</h2>
+      <p class="muted">Responders may call these people. Please check they're happy for you to share their details.</p>
+      <ul class="list-rows">
+        {% for contact in current_user.contacts %}
+          <li>
+            <span>{{ contact.name }}{% if contact.relationship_label %} ({{ contact.relationship_label }}){% endif %}<small>{{ contact.phone }}</small></span>
+            <form method="post" action="{{ url_for('citizen.delete_contact', contact_id=contact.id) }}">
+              {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">Remove</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="muted">None added yet.</li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('citizen.add_contact') }}" class="form-grid">
+        {{ forms.csrf() }}
+        {{ forms.field("name", "Name", required=true) }}
+        {{ forms.field("phone", "Phone number", type="tel", required=true) }}
+        {{ forms.field("relationship", "Relationship", class="full") }}
+        <div class="full"><button class="btn btn-ghost" type="submit">Add contact</button></div>
+      </form>
+    </section>
+
+    <section class="card" id="devices">
+      <h2>My beacons</h2>
+      <p class="muted">Link an ESP32 panic button, so its alerts come with your details.</p>
+      {% if new_key %}
+        <div class="key-box" role="status">
+          <strong>Beacon "{{ new_device.label }}" linked.</strong> Copy this key now. You won't see it again.
+          <code id="new-key">{{ new_key }}</code>
+          <button class="btn btn-ghost btn-small" type="button" data-copy="#new-key">Copy key</button>
+          <p style="margin-top:8px">Put it in the <b>DEVICE_KEY</b> line of your beacon's firmware.</p>
+        </div>
+      {% endif %}
+      <ul class="list-rows">
+        {% for device in current_user.devices if not device.revoked_at %}
+          <li>
+            <span>{{ device.label }}<small>{{ device.device_uid }} · last alert: {{ device.last_seen_at | when }}</small></span>
+            <form method="post" action="{{ url_for('citizen.revoke_device', device_id=device.id) }}" data-confirm="Remove this beacon? It will stop being able to send alerts.">
+              {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">Remove</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="muted">No beacons linked.</li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('citizen.add_device') }}" class="stack">
+        {{ forms.csrf() }}
+        {{ forms.field("label", "Beacon name", required=true, hint="For example: Car or Mum's bag") }}
+        <div><button class="btn btn-ghost" type="submit">Link a beacon</button></div>
+      </form>
+    </section>
+  </div>
+
+  <section class="card" id="history">
+    <h2>My alerts</h2>
+    <ul class="list-rows">
+      {% for alert in alerts %}
+        <li>
+          <span>{{ alert.type }}<small>{{ alert.public_id }} · {{ alert.received_at | when }}</small></span>
+          <span class="badge {{ 'badge-ok' if alert.status == 'resolved' else 'badge-pending' }}">{{ alert.status_label }}</span>
+        </li>
+      {% else %}
+        <li class="muted">You haven't sent any alerts.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card danger-zone" id="privacy">
+    <h2>My data</h2>
+    <p class="muted">Read the <a href="{{ url_for('public.privacy') }}">privacy notice</a>, download your data, or delete your account.</p>
+    <div class="btn-row" style="margin:14px 0"><a class="btn btn-ghost" href="{{ url_for('citizen.export_data') }}">Download my data</a></div>
+    <form method="post" action="{{ url_for('citizen.delete_account') }}" class="stack" data-confirm="Delete your account and personal details? This can't be undone.">
+      {{ forms.csrf() }}
+      {{ forms.field("password", "Enter your password to delete your account", type="password", required=true, autocomplete="current-password") }}
+      <div><button class="btn btn-danger" type="submit">Delete my account</button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ forms.leaflet_js() }}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/js/picker.js"></script>
+<script src="/static/js/citizen.js"></script>
+{% endblock %}

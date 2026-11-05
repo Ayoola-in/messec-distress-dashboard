@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Users</h1></div>
+
+{% if reset_link %}
+<div class="link-box">
+  <code id="reset-link">{{ reset_link }}</code>
+  <button class="btn btn-ghost btn-small" type="button" data-copy="#reset-link">Copy link</button>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:24px">
+  <h2>Add a staff account</h2>
+  <p class="muted">They get a link to set their own password. Citizens sign up for themselves.</p>
+  <form method="post" action="{{ url_for('admin.users') }}" class="form-grid" style="margin-top:14px">
+    {{ forms.csrf() }}
+    {{ forms.field("full_name", "Full name", values, errors, required=true) }}
+    {{ forms.field("email", "Email", values, errors, type="email", required=true) }}
+    {{ forms.field("phone", "Phone (optional)", values, errors, type="tel") }}
+    <label class="field {{ 'has-error' if errors.get('role') }}"><span>Role</span>
+      <select name="role" required>
+        <option value="">Choose…</option>
+        {% for role in creatable_roles %}<option value="{{ role }}" {{ 'selected' if values.get('role') == role }}>{{ ROLE_LABELS[role] }}</option>{% endfor %}
+      </select>
+      {% if errors.get('role') %}<span class="field-error">{{ errors.get('role') }}</span>{% endif %}
+    </label>
+    <label class="field full {{ 'has-error' if errors.get('station_id') }}"><span>Station (for station staff)</span>
+      <select name="station_id">
+        <option value="">None</option>
+        {% for s in approved_stations %}<option value="{{ s.id }}" {{ 'selected' if values.get('station_id') == s.id }}>{{ s.name }} ({{ s.code }})</option>{% endfor %}
+      </select>
+      {% if errors.get('station_id') %}<span class="field-error">{{ errors.get('station_id') }}</span>{% endif %}
+    </label>
+    <div class="full"><button class="btn btn-primary" type="submit">Create account</button></div>
+  </form>
+</div>
+
+<form method="get" class="filter-bar">
+  <label class="field"><span>Role</span>
+    <select name="role">
+      <option value="">All roles</option>
+      {% for key, label in ROLE_LABELS.items() %}<option value="{{ key }}" {{ 'selected' if role_filter == key }}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn btn-ghost" type="submit">Filter</button>
+</form>
+
+<div class="data-wrap"><table class="data">
+  <thead><tr><th>Name</th><th>Role</th><th>Station</th><th>Last login</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td><strong>{{ u.full_name }}</strong><small>{{ u.email }}</small></td>
+      <td>{{ ROLE_LABELS[u.role] }}</td>
+      <td>{{ u.station.name if u.station else '—' }}</td>
+      <td>{{ u.last_login_at | when }}</td>
+      <td><span class="badge {{ 'badge-ok' if u.enabled else 'badge-off' }}">{{ 'Enabled' if u.enabled else 'Disabled' }}</span></td>
+      <td><div class="btn-row">
+        <form method="post" action="{{ url_for('admin.user_action', user_id=u.id, action='reset') }}">
+          {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">Reset link</button>
+        </form>
+        {% if u.id != current_user.id %}
+        <form method="post" action="{{ url_for('admin.user_action', user_id=u.id, action='disable' if u.enabled else 'enable') }}" {% if u.enabled %}data-confirm="Disable {{ u.full_name }}'s account? They lose access immediately."{% endif %}>
+          {{ forms.csrf() }}<button class="btn btn-ghost btn-small" type="submit">{{ 'Disable' if u.enabled else 'Enable' }}</button>
+        </form>
+        {% endif %}
+      </div></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

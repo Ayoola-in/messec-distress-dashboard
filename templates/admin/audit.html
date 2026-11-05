@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Audit log</h1></div>
+{% if pagination.items %}
+<div class="data-wrap"><table class="data">
+  <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Detail</th><th>IP address</th></tr></thead>
+  <tbody>
+  {% for entry in pagination.items %}
+    <tr>
+      <td>{{ entry.created_at | when }}</td>
+      <td>{{ entry.actor.full_name if entry.actor else 'System or public' }}</td>
+      <td class="mono">{{ entry.action }}</td>
+      <td class="mono">{{ entry.target or '—' }}</td>
+      <td>{{ entry.detail or '—' }}</td>
+      <td class="mono">{{ entry.ip_address or '—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<div class="pagination">
+  {% if pagination.has_prev %}<a class="btn btn-ghost btn-small" href="{{ url_for('admin.audit_log', page=pagination.prev_num) }}">Newer</a>{% endif %}
+  <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+  {% if pagination.has_next %}<a class="btn btn-ghost btn-small" href="{{ url_for('admin.audit_log', page=pagination.next_num) }}">Older</a>{% endif %}
+</div>
+{% else %}
+<div class="empty-state">Nothing has been logged yet.</div>
+{% endif %}
+{% endblock %}

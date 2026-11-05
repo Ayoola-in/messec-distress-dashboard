@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}Sign up{% endblock %}
+{% block content %}
+<section class="narrow">
+  <div class="card">
+    <h1>Create your account</h1>
+    <p class="muted" style="margin-top:6px">Responders use these details to find and help you.</p>
+    <form method="post" class="stack" style="margin-top:18px">
+      {{ forms.csrf() }}
+      {{ forms.field("full_name", "Full name", values, errors, required=true, autocomplete="name") }}
+      {{ forms.field("email", "Email", values, errors, type="email", required=true, autocomplete="email") }}
+      {{ forms.field("phone", "Phone number", values, errors, type="tel", required=true, autocomplete="tel") }}
+      {{ forms.field("address", "Home address (optional)", values, errors, autocomplete="street-address") }}
+      {{ forms.field("password", "Password", errors=errors, type="password", required=true, hint="At least 10 characters.", autocomplete="new-password") }}
+      {{ forms.field("confirm", "Confirm password", type="password", required=true, autocomplete="new-password") }}
+      <label class="check">
+        <input type="checkbox" name="consent" required />
+        <span>I agree that MesSec can store these details and share them with dispatchers and responding stations when I send an alert, as described in the <a href="{{ url_for('public.privacy') }}" target="_blank">privacy notice</a>.</span>
+      </label>
+      {% if errors.get('consent') %}<span class="field-error">{{ errors.get('consent') }}</span>{% endif %}
+      <button class="btn btn-primary" type="submit">Create account</button>
+    </form>
+  </div>
+  <p class="form-foot">Already registered? <a href="{{ url_for('public.login') }}">Log in</a></p>
+</section>
+{% endblock %}

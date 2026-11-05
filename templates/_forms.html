@@ -1,0 +1,45 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />{% endmacro %}
+
+{% macro field(name, label, values={}, errors={}, type="text", required=false, hint=None, class="", autocomplete=None) %}
+<label class="field {{ class }} {{ 'has-error' if errors.get(name) }}">
+  <span>{{ label }}</span>
+  <input name="{{ name }}" type="{{ type }}" value="{{ values.get(name) if values.get(name) is not none and type != 'password' else '' }}"
+         {{ 'required' if required }} {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %} />
+  {% if hint %}<small>{{ hint }}</small>{% endif %}
+  {% if errors.get(name) %}<span class="field-error">{{ errors.get(name) }}</span>{% endif %}
+</label>
+{% endmacro %}
+
+{% macro station_fields(values, errors, STATION_TYPES) %}
+<div class="form-grid">
+  {{ field("name", "Station or body name", values, errors, required=true, class="full") }}
+  <label class="field {{ 'has-error' if errors.get('type') }}">
+    <span>Type</span>
+    <select name="type" required>
+      <option value="">Choose…</option>
+      {% for key, label in STATION_TYPES.items() %}
+        <option value="{{ key }}" {{ 'selected' if values.get('type') == key }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.get('type') %}<span class="field-error">{{ errors.get('type') }}</span>{% endif %}
+  </label>
+  {{ field("zone", "Area covered", values, errors, required=true, hint="For example: Ikeja") }}
+  {{ field("address", "Address", values, errors, required=true, class="full") }}
+  {{ field("phone", "Duty phone number", values, errors, type="tel", required=true, hint="The number dispatchers and citizens will call.") }}
+  {{ field("email", "Station email", values, errors, type="email") }}
+  {{ field("contact_name", "Officer in charge", values, errors) }}
+  {{ field("registration_ref", "Official reference number", values, errors, hint="Helps the admin verify your station.") }}
+  <div class="field full {{ 'has-error' if errors.get('location') }}">
+    <span>Location</span>
+    <div id="station-map" class="map-picker"></div>
+    <small>Click the map where the station is. Distances and the nearest-station suggestion depend on this.
+      <button type="button" class="btn btn-ghost btn-small" id="use-my-location">Use my location</button></small>
+    <input type="hidden" id="lat" name="lat" value="{{ values.get('lat', '') }}" />
+    <input type="hidden" id="lng" name="lng" value="{{ values.get('lng', '') }}" />
+    {% if errors.get('location') %}<span class="field-error">{{ errors.get('location') }}</span>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro leaflet_head() %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />{% endmacro %}
+{% macro leaflet_js() %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>{% endmacro %}

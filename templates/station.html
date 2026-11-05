@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+{% block title %}Station console{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block head %}{{ forms.leaflet_head() }}{% endblock %}
+{% block content %}
+<div id="station-console" data-lat="{{ station.lat }}" data-lng="{{ station.lng }}">
+  <div class="page-head">
+    <div>
+      <h1>{{ station.name }}</h1>
+      <p class="muted">{{ station.type_label }} · {{ station.zone }} · {{ station.code }}</p>
+    </div>
+    <span class="spacer"></span>
+    <div class="conn conn-inline" id="conn" data-state="offline"><span class="conn-dot"></span><span id="conn-label">Connecting</span></div>
+    <button class="btn btn-ghost btn-small" id="sound-toggle" type="button">Alarm sound: on</button>
+  </div>
+
+  <div class="alarm-bar" id="alarm-bar" role="alert" hidden>
+    <svg class="ic"><use href="#i-alert"/></svg> New incident waiting. Accept or decline it now.
+  </div>
+
+  <div class="console-grid">
+    <section>
+      <h2 class="section-title" style="margin-top:0">Open incidents <span class="count" id="open-count">0</span></h2>
+      <div class="console-list" id="open-list"><div class="empty-state">Loading…</div></div>
+    </section>
+    <aside class="console-side">
+      <div id="station-map"></div>
+      <div class="card">
+        <h2>Recently resolved</h2>
+        <ul class="done-list" id="done-list"></ul>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ forms.leaflet_js() }}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/js/station.js"></script>
+{% endblock %}
